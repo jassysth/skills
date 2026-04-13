@@ -2,8 +2,8 @@
 name: skill-manager
 description: |
   管理、分类和组织 Claude Code Skills 的技能。当用户说"整理 Skill"时触发。
-  自动扫描 ~/.claude/skills 目录，找出新增的 Skill，按类别归档到对应的 GitHub 仓库分类目录，并全量同步到 GitHub。
-  适用于需要批量管理多个 skills、保持本地和远程同步、组织 skill 分类结构的场景。
+  自动扫描 ~/.claude/skills 目录，找出新增的 Skill，按类别归档到对应的 GitHub 仓库分类目录，并全量同步到 allskill 仓库。
+  最后依次对所有仓库执行 git commit + push。
 ---
 
 # Skill Manager
@@ -26,49 +26,97 @@ ls -la ~/.claude/skills/
 
 每个 Skill 以独立文件夹形式存在，包含 `SKILL.md` 文件。
 
-### 步骤 2: 获取现有分类状态
+跳过以下目录：
+- `.git` — Git 仓库目录
+- `obsidian-skills` — 外部插件包
+- 任何不含 `SKILL.md` 的目录
 
-检查 GitHub 仓库的分类结构：
+### 步骤 2: 获取现有仓库状态
+
+检查已存在的分类仓库：
 
 ```bash
-gh repo clone jassysth/skills -- --depth=1 /tmp/skills-repo
-ls -la /tmp/skills-repo/
+gh api "/users/jassysth/repos?per_page=100" --paginate --jq '.[].name'
 ```
 
 ### 步骤 3: 分类规则
 
-根据 Skill 的描述和名称，自动归类到以下类别：
+根据 Skill 的 `description` 字段，自动归类到以下类别：
 
-| 类别 | 关键词 | 目标目录 |
-|------|--------|----------|
-| **document** | document-skills, pdf, docx, pptx, xlsx, markdown, writing | `docs/` |
-| **creative** | canvas, art, design, image, visual, poster | `creative/` |
-| **development** | code, api, mcp, script, programming, debug | `dev/` |
-| **productivity** | internal-comms, workflow, automation, productivity | `productivity/` |
-| **ai** | claude-api, anthropic, agent, llm | `ai/` |
-| **meta** | skill-creator, skill 相关的工具类 | `meta/` |
-| **uncategorized** | 无匹配项 | `others/` |
+| 类别 | 关键词 | 仓库名 |
+|------|--------|--------|
+| **writing** | document-skills, docx, pdf, pptx, xlsx, writing, markdown, 写作 | `allskill-writing` |
+| **drawing** | canvas, art, design, image, visual, poster, 画图 | `allskill-drawing` |
+| **info** | fetch, search, web, 信息, 获取 | `allskill-info` |
+| **PM** | internal-comms, workflow, productivity, pm, 项目 | `allskill-pm` |
+| **other** | 无匹配项 | `allskill-other` |
+| **allskill** | 全部 Skills（主仓库） | `allskill` |
 
 分类逻辑：
-- 读取每个 Skill 的 `SKILL.md`，提取 `description` 字段
-- 根据关键词匹配确定类别
-- 如果是新建 Skill（本地存在但 GitHub 上没有），标记为 **new**
+1. 读取每个 Skill 的 `SKILL.md`，提取 `description` 字段
+2. 根据关键词匹配确定类别
+3. 标记 **新增** 的 Skills（本地存在但所有分类仓库中都没有）
 
-### 步骤 4: 同步到 GitHub
+### 步骤 4: 创建缺失的分类仓库
 
-1. **复制本地 Skills 到分类目录**（如果目标仓库是新建的）
-2. **提交并推送**：
+如果分类仓库不存在，创建它：
 
 ```bash
-cd /tmp/skills-repo
+gh repo create allskill-{category} --public --description "Claude Skills: {category}"
+```
+
+### 步骤 5: 同步 Skills 到各仓库
+
+对于每个分类：
+
+1. **克隆或更新目标仓库**：
+```bash
+gh repo clone jassysth/allskill-{category} /tmp/allskill-{category} -- --depth=1
+```
+
+2. **复制 Skills 到分类目录**：
+```bash
+cp -r ~/.claude/skills/{skill-name} /tmp/allskill-{category}/
+```
+
+3. **提交并推送**：
+```bash
+cd /tmp/allskill-{category}
 git add .
 git commit -m "Sync: $(date '+%Y-%m-%d %H:%M')"
 git push
 ```
 
-### 步骤 5: 输出报告
+### 步骤 6: 全量同步到 allskill 主仓库
 
-生成同步报告：
+```bash
+gh repo clone jassysth/allskill /tmp/allskill -- --depth=1
+cp -r ~/.claude/skills/*/SKILL.md /tmp/allskill/ 2>/dev/null || true
+cd /tmp/allskill
+git add .
+git commit -m "Full sync: $(date '+%Y-%m-%d %H:%M')"
+git push
+```
+
+### 步骤 7: 依次执行 (按仓库顺序)
+
+按以下顺序依次执行 git commit + push：
+1. `allskill-writing`
+2. `allskill-drawing`
+3. `allskill-info`
+4. `allskill-pm`
+5. `allskill-other`
+6. `allskill` (主仓库)
+
+## 配置
+
+- **本地 Skills 目录**: `~/.claude/skills`
+- **GitHub 用户名**: `jassysth`
+- **分类仓库前缀**: `allskill-`
+- **主仓库名**: `allskill`
+- **主分支**: `main`
+
+## 输出报告
 
 ```
 ## Skill 整理报告
@@ -77,26 +125,23 @@ git push
 - 本地 Skills 总数: N
 - 新增 Skills: [列表]
 - 分类结果:
-  - document: N
-  - creative: N
-  - development: N
-  - productivity: N
-  - ai: N
-  - meta: N
-  - uncategorized: N
-- GitHub 同步状态: ✓ 完成
+  - writing: N (仓库: allskill-writing)
+  - drawing: N (仓库: allskill-drawing)
+  - info: N (仓库: allskill-info)
+  - PM: N (仓库: allskill-pm)
+  - other: N (仓库: allskill-other)
+- 各仓库同步状态:
+  - allskill-writing: ✓/✗
+  - allskill-drawing: ✓/✗
+  - allskill-info: ✓/✗
+  - allskill-pm: ✓/✗
+  - allskill-other: ✓/✗
+  - allskill: ✓/✗
 ```
-
-## 配置
-
-默认配置（可按需修改）：
-
-- **本地 Skills 目录**: `~/.claude/skills`
-- **GitHub 仓库**: `jassysth/skills`
-- **主分支**: `main`
 
 ## 注意事项
 
 - 确保 `gh` 已认证：`gh auth status`
 - Skill 文件必须包含 `SKILL.md` 才视为有效 Skill
 - 分类关键词可根据实际需求扩展
+- 按顺序执行推送，确保每个仓库成功后再处理下一个
