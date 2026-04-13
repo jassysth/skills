@@ -3,6 +3,7 @@ name: skill-manager
 description: |
   管理、分类和组织 Claude Code Skills 的技能。当用户说"整理 Skill"时触发。
   自动扫描 ~/.claude/skills 目录，找出新增的 Skill，按类别归档到对应的 GitHub 仓库分类目录，并全量同步到 allskill 仓库。
+  为每个分类仓库生成 README.md，包含各 Skill 的一句话功能描述。
   最后依次对所有仓库执行 git commit + push。
 ---
 
@@ -87,7 +88,25 @@ git commit -m "Sync: $(date '+%Y-%m-%d %H:%M')"
 git push
 ```
 
-### 步骤 6: 全量同步到 allskill 主仓库
+### 步骤 6: 完善各分类仓库的 README
+
+为每个分类仓库生成或更新 README.md，包含该分类下所有 Skill 的一句话描述：
+
+```markdown
+# {category} Skills
+
+| Skill | Description |
+|-------|-------------|
+| skill-name-1 | 一句话描述（取自 SKILL.md 的 description 第一行） |
+| skill-name-2 | 一句话描述 |
+```
+
+生成规则：
+1. 读取每个 Skill 的 `SKILL.md`，提取 `description` 字段的第一句话作为描述
+2. 如果仓库已有 README，则更新现有表格；否则创建新 README
+3. 将 README 写入仓库根目录
+
+### 步骤 7: 全量同步到 allskill 主仓库
 
 ```bash
 gh repo clone jassysth/allskill /tmp/allskill -- --depth=1
@@ -98,7 +117,7 @@ git commit -m "Full sync: $(date '+%Y-%m-%d %H:%M')"
 git push
 ```
 
-### 步骤 7: 依次执行 (按仓库顺序)
+### 步骤 8: 依次执行 (按仓库顺序)
 
 按以下顺序依次执行 git commit + push：
 1. `writing-skill`
