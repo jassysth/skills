@@ -45,11 +45,11 @@ gh api "/users/jassysth/repos?per_page=100" --paginate --jq '.[].name'
 
 | 类别 | 关键词 | 仓库名 |
 |------|--------|--------|
-| **writing** | document-skills, docx, pdf, pptx, xlsx, writing, markdown, 写作 | `allskill-writing` |
-| **drawing** | canvas, art, design, image, visual, poster, 画图 | `allskill-drawing` |
-| **info** | fetch, search, web, 信息, 获取 | `allskill-info` |
-| **PM** | internal-comms, workflow, productivity, pm, 项目 | `allskill-pm` |
-| **other** | 无匹配项 | `allskill-other` |
+| **writing** | document-skills, docx, pdf, pptx, xlsx, writing, markdown, 写作 | `writing-skill` |
+| **drawing** | canvas, art, design, image, visual, poster, 画图 | `drawing-skill` |
+| **info** | fetch, search, web, 信息, 获取 | `info-skill` |
+| **PM** | internal-comms, workflow, productivity, pm, 项目 | `pm-skill` |
+| **other** | 无匹配项 | `other-skill` |
 | **allskill** | 全部 Skills（主仓库） | `allskill` |
 
 分类逻辑：
@@ -62,7 +62,7 @@ gh api "/users/jassysth/repos?per_page=100" --paginate --jq '.[].name'
 如果分类仓库不存在，创建它：
 
 ```bash
-gh repo create allskill-{category} --public --description "Claude Skills: {category}"
+gh repo create {category}-skill --public --description "Claude Skills: {category}"
 ```
 
 ### 步骤 5: 同步 Skills 到各仓库
@@ -71,17 +71,17 @@ gh repo create allskill-{category} --public --description "Claude Skills: {categ
 
 1. **克隆或更新目标仓库**：
 ```bash
-gh repo clone jassysth/allskill-{category} /tmp/allskill-{category} -- --depth=1
+gh repo clone jassysth/{category}-skill /tmp/{category}-skill -- --depth=1
 ```
 
 2. **复制 Skills 到分类目录**：
 ```bash
-cp -r ~/.claude/skills/{skill-name} /tmp/allskill-{category}/
+cp -r ~/.claude/skills/{skill-name} /tmp/{category}-skill/
 ```
 
 3. **提交并推送**：
 ```bash
-cd /tmp/allskill-{category}
+cd /tmp/{category}-skill
 git add .
 git commit -m "Sync: $(date '+%Y-%m-%d %H:%M')"
 git push
@@ -101,18 +101,18 @@ git push
 ### 步骤 7: 依次执行 (按仓库顺序)
 
 按以下顺序依次执行 git commit + push：
-1. `allskill-writing`
-2. `allskill-drawing`
-3. `allskill-info`
-4. `allskill-pm`
-5. `allskill-other`
+1. `writing-skill`
+2. `drawing-skill`
+3. `info-skill`
+4. `pm-skill`
+5. `other-skill`
 6. `allskill` (主仓库)
 
 ## 配置
 
 - **本地 Skills 目录**: `~/.claude/skills`
 - **GitHub 用户名**: `jassysth`
-- **分类仓库前缀**: `allskill-`
+- **分类仓库后缀**: `{category}-skill`
 - **主仓库名**: `allskill`
 - **主分支**: `main`
 
@@ -125,17 +125,17 @@ git push
 - 本地 Skills 总数: N
 - 新增 Skills: [列表]
 - 分类结果:
-  - writing: N (仓库: allskill-writing)
-  - drawing: N (仓库: allskill-drawing)
-  - info: N (仓库: allskill-info)
-  - PM: N (仓库: allskill-pm)
-  - other: N (仓库: allskill-other)
+  - writing: N (仓库: writing-skill)
+  - drawing: N (仓库: drawing-skill)
+  - info: N (仓库: info-skill)
+  - PM: N (仓库: pm-skill)
+  - other: N (仓库: other-skill)
 - 各仓库同步状态:
-  - allskill-writing: ✓/✗
-  - allskill-drawing: ✓/✗
-  - allskill-info: ✓/✗
-  - allskill-pm: ✓/✗
-  - allskill-other: ✓/✗
+  - writing-skill: ✓/✗
+  - drawing-skill: ✓/✗
+  - info-skill: ✓/✗
+  - pm-skill: ✓/✗
+  - other-skill: ✓/✗
   - allskill: ✓/✗
 ```
 
